@@ -23,6 +23,8 @@ import android.hardware.Camera;
 import android.os.Build;
 import android.util.Log;
 
+import com.dtr.zxing.Config;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -376,6 +378,90 @@ public final class CameraConfigurationUtils {
         return defaultSize;
     }
 
+    public static Point findBestPreviewResolution(Camera.Parameters cameraParameters, Point screenResolution, int screenOrientation, int cameraOrientation) {
+        Camera.Size defaultPreviewResolution = cameraParameters.getPreviewSize(); //默认的预览尺寸
+        Log.d(TAG, "camera default resolution " + defaultPreviewResolution.width + "x" + defaultPreviewResolution.height);
+        List<Camera.Size> rawSupportedSizes = cameraParameters.getSupportedPreviewSizes();
+        if (rawSupportedSizes == null) {
+            Log.w(TAG, "Device returned no supported preview sizes; using default");
+            return new Point(defaultPreviewResolution.width, defaultPreviewResolution.height);
+        }
+        // 按照分辨率从大到小排序
+        List<Camera.Size> supportedPreviewResolutions = new ArrayList<Camera.Size>(rawSupportedSizes);
+        Collections.sort(supportedPreviewResolutions, new Comparator<Camera.Size>() {
+            @Override
+            public int compare(Camera.Size a, Camera.Size b) {
+                int aPixels = a.height * a.width;
+                int bPixels = b.height * b.width;
+                if (bPixels < aPixels) {
+                    return -1;
+                }
+                if (bPixels > aPixels) {
+                    return 1;
+                }
+                return 0;
+            }
+        });
+//        printlnSupportedPreviewSize(supportedPreviewResolutions);
+        // 在camera分辨率与屏幕分辨率宽高比不相等的情况下，找出差距最小的一组分辨率
+        // 由于camera的分辨率是width>height，这里先判断我们的屏幕和相机的角度是不是相同的方向(横屏 or 竖屏),然后决定比较的时候要不要先交换宽高值
+        final boolean isCandidatePortrait = screenOrientation % 180 != cameraOrientation % 180;
+        final double screenAspectRatio = (double) screenResolution.x / (double) screenResolution.y;
+        // 移除不符合条件的分辨率
+        Iterator<Camera.Size> it = supportedPreviewResolutions.iterator();
+        while (it.hasNext()) {
+            Camera.Size supportedPreviewResolution = it.next();
+            int width = supportedPreviewResolution.width;
+            int height = supportedPreviewResolution.height;
+            // 移除低于下限的分辨率，尽可能取高分辨率
+            if (width * height < MIN_PREVIEW_PIXELS) {
+                it.remove();
+                continue;
+            }
+            //移除宽高比差异较大的
+            int maybeFlippedWidth = isCandidatePortrait ? height : width;
+            int maybeFlippedHeight = isCandidatePortrait ? width : height;
+            double aspectRatio = (double) maybeFlippedWidth / (double) maybeFlippedHeight;
+            double distortion = Math.abs(aspectRatio - screenAspectRatio);
+            if (distortion > MAX_ASPECT_DISTORTION) {
+                it.remove();
+                continue;
+            }
+            // 找到与屏幕分辨率完全匹配的预览界面分辨率直接返回
+            if (maybeFlippedWidth == screenResolution.x && maybeFlippedHeight == screenResolution.y) {
+                Point exactPoint = new Point(width, height);
+                Log.d(TAG, "found preview resolution exactly matching screen resolutions: " + exactPoint);
+                return exactPoint;
+            }
+            //删掉宽高比比屏幕小的,防止左右出现白边
+            if (aspectRatio - screenAspectRatio < 0) {
+                it.remove();
+                continue;
+            }
+        }
+        // 如果没有找到合适的，并且还有候选的像素，则设置分辨率最大的
+        if (!supportedPreviewResolutions.isEmpty()) {
+            Camera.Size largestPreview = supportedPreviewResolutions.get(0);
+            Point largestSize = new Point(largestPreview.width, largestPreview.height);
+            Log.d(TAG, "using largest suitable preview resolution: " + largestSize);
+            return largestSize;
+        }
+        //如果最后集合空了且本身支持640*480,则选择640*480
+        if (supportedPreviewResolutions.isEmpty()) {
+            it = rawSupportedSizes.iterator();
+            while (it.hasNext()) {
+                final Camera.Size next = it.next();
+                if (next.width == 640 && next.height == 480) {
+                    return new Point(next.width, next.height);
+                }
+            }
+        }
+        // 没有找到合适的，就返回默认的
+        Point defaultResolution = new Point(defaultPreviewResolution.width, defaultPreviewResolution.height);
+        Log.i(TAG, "No suitable preview resolutions, using default: " + defaultResolution);
+        return defaultResolution;
+    }
+
     private static class SizeComparator implements Comparator<Camera.Size> {
 
         private final int width;
@@ -417,10 +503,21 @@ public final class CameraConfigurationUtils {
         }
     }
 
+    private static void printSize(List<Camera.Size> preSizeList){
+        if(preSizeList != null){
+            for(int i = 0; i < preSizeList.size(); i++){
+                Log.e(TAG, String.format(i + ":Screen x:%d  screen Y: %d " , preSizeList.get(i).width, preSizeList.get(i).height));
+            }
+
+        }
+    }
 
     public static Point findCloselySize(Camera.Parameters parameters, int surfaceWidth, int surfaceHeight, List<Camera.Size> preSizeList) {
-
+        if(Config.KEY_IS_DEBUG){
+            printSize(preSizeList);
+        }
         Log.i(TAG, String.format("Screen x:%d  screen Y: %d " , surfaceWidth, surfaceHeight));
+
         Collections.sort(preSizeList, new SizeComparator(surfaceWidth, surfaceHeight));
 
         for (int i = 0; i < preSizeList.size(); i++) {
@@ -436,8 +533,14 @@ public final class CameraConfigurationUtils {
             }
 //            Log.i(TAG, String.format("Camera x:%d  Camera Y: %d " ,  size.width, size.height));
         }
+        Point point = null;
+        if(Config.KEY_IS_AUTO_DEVICE){
+            point = new Point(800, 480);
+        }
+        else{
+            point = new Point(preSizeList.get(0).width, preSizeList.get(0).height);
+        }
 
-        Point point = new Point(preSizeList.get(0).width, preSizeList.get(0).height);
         Log.i(TAG, "Found first preview size exactly matching screen size: " + point);
         return point;
     }

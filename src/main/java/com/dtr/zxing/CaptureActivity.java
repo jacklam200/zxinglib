@@ -123,7 +123,7 @@ public class CaptureActivity extends Activity implements SurfaceHolder.Callback 
         return cameraManager;
     }
 
-    public boolean isDebug = false;
+    public boolean isDebug = Config.KEY_IS_DEBUG;
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -324,6 +324,21 @@ public class CaptureActivity extends Activity implements SurfaceHolder.Callback 
             SurfaceView surfaceView = (SurfaceView) findViewById(R.id.capture_preview);
             SurfaceHolder surfaceHolder = surfaceView.getHolder();
             surfaceHolder.removeCallback(this);
+        }
+    }
+
+    public void requestDecodeStop(boolean isStop){
+
+        if (handler != null) {
+            handler.stopDecode(isStop);
+        }
+    }
+
+
+    public void quitSynchronously(){
+
+        if (handler != null) {
+            handler.quitSynchronously();
         }
     }
 

@@ -22,6 +22,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.dtr.zxing.R;
+
 final class PreviewCallback implements Camera.PreviewCallback {
 
   private static final String TAG = PreviewCallback.class.getSimpleName();
@@ -29,6 +31,7 @@ final class PreviewCallback implements Camera.PreviewCallback {
   private final CameraConfigurationManager configManager;
   private Handler previewHandler;
   private int previewMessage;
+	private boolean isStop = false;
 
   PreviewCallback(CameraConfigurationManager configManager) {
     this.configManager = configManager;
@@ -39,19 +42,30 @@ final class PreviewCallback implements Camera.PreviewCallback {
     this.previewMessage = previewMessage;
   }
 
+  public void setStop(boolean isStop){
+		this.isStop = isStop;
+  }
+
   @Override
   public void onPreviewFrame(byte[] data, Camera camera) {
     Point cameraResolution = configManager.getCameraResolution();
     Handler thePreviewHandler = previewHandler;
 
 
-    if (cameraResolution != null && thePreviewHandler != null) {
+    if (cameraResolution != null && thePreviewHandler != null && !isStop) {
 //      PreviewYUVProccess proccess = new PreviewYUVProccess();
 //      byte[] dstData = proccess.processLight(data, cameraResolution.x, cameraResolution.y, 0, 0);
-      Message message = thePreviewHandler.obtainMessage(previewMessage, cameraResolution.x,
-          cameraResolution.y, data);
-      message.sendToTarget();
-      previewHandler = null;
+      if(previewMessage != R.id.decode_stop){
+
+        Message message = thePreviewHandler.obtainMessage(previewMessage, cameraResolution.x,
+                cameraResolution.y, data);
+        message.sendToTarget();
+        previewHandler = null;
+      }
+      else{
+
+      }
+
     } else {
       Log.d(TAG, "Got preview callback, but no handler or resolution available");
     }

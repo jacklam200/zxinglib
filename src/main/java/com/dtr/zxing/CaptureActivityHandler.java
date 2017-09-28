@@ -46,6 +46,7 @@ public final class CaptureActivityHandler extends Handler {
   private final DecodeThread decodeThread;
   private State state;
   private final CameraManager cameraManager;
+  private boolean isStop = false;
 
   private enum State {
     PREVIEW,
@@ -72,6 +73,7 @@ public final class CaptureActivityHandler extends Handler {
 
   @Override
   public void handleMessage(Message message) {
+
     if(message.what == R.id.restart_preview){
       restartPreviewAndDecode();
     }
@@ -126,6 +128,20 @@ public final class CaptureActivityHandler extends Handler {
       cameraManager.requestPreviewFrame(decodeThread.getHandler(), R.id.decode);
       activity.drawViewfinder();
     }
+  }
+
+  public void stopDecode(boolean isStop){
+
+    cameraManager.stopDecodeFrame(isStop);
+//    state = State.SUCCESS;
+//    this.isStop = isStop;
+//    if(isStop){
+//      removeMessages(R.id.restart_preview);
+//      removeMessages(R.id.decode_succeeded);
+//      removeMessages(R.id.decode_failed);
+//      cameraManager.requestPreviewFrame(decodeThread.getHandler(), R.id.decode_stop);
+//    }
+
   }
 
 }

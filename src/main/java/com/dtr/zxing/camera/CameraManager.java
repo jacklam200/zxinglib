@@ -244,11 +244,23 @@ public final class CameraManager {
      */
     public synchronized void requestPreviewFrame(Handler handler, int message) {
         OpenCamera theCamera = camera;
+        Log.v(TAG, "previewing:" + previewing);
+        Log.v(TAG, "theCamera:" + theCamera);
         if (theCamera != null && previewing) {
             previewCallback.setHandler(handler, message);
             theCamera.getCamera().setOneShotPreviewCallback(previewCallback);
         }
+        else{
+
+        }
     }
+
+    public synchronized void stopDecodeFrame(boolean isStop){
+        if(previewCallback != null){
+            previewCallback.setStop(isStop);
+        }
+    }
+
 
     /**
      * Calculates the framing rect which the UI should draw to show the user where to place the
@@ -416,7 +428,7 @@ public final class CameraManager {
     public PlanarYUVLuminanceSource buildLuminanceSource(byte[] data, int width, int height) {
 
         Rect rect = getFramingRectInPreview();
-        if (rect == null) {
+        if (rect == null || rect.width() < 1 || rect.height() < 1 || width < 1 || height < 1) {
             return null;
         }
         Log.d("jacklam", "buildLuminanceSource getFramingRectInPreview: " + rect);

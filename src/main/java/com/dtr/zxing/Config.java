@@ -26,4 +26,7 @@ public class Config {
     public  static boolean KEY_DECODE_DATA_MATRIX = true;
     public  static boolean KEY_DECODE_AZTEC = false;
     public  static boolean KEY_DECODE_PDF417 = false;
+
+    public static boolean KEY_IS_AUTO_DEVICE = false; // 自助扫描是前置摄像头 true ,针对专门的设备
+    public  static boolean KEY_IS_DEBUG = false;
 }

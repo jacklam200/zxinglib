@@ -1,4 +1,9 @@
-apply plugin: 'com.android.library'
+if (isDebug.toBoolean()) {
+    apply plugin: 'com.android.application'
+}
+else{
+    apply plugin: 'com.android.library'
+}
 //apply plugin: 'com.android.application'
 android {
     compileSdkVersion 23
@@ -23,8 +28,12 @@ android {
     sourceSets {
         main {
             jniLibs.srcDirs = ['libs']
+            if (isDebug.toBoolean()) {
+                manifest.srcFile 'src/debug/AndroidManifest.xml'
+            }
         }
     }
+
 
     buildTypes {
         debug {
@@ -37,6 +46,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+
 
 
 }

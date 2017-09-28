@@ -57,6 +57,7 @@ public final class CameraConfigurationManager {
 
   public CameraConfigurationManager(Context context) {
     this.context = context;
+
   }
 
   /**
@@ -120,7 +121,7 @@ public final class CameraConfigurationManager {
     Log.i(TAG, "Final display orientation: " + cwRotationFromDisplayToCamera);
     if (camera.getFacing() == CameraFacing.FRONT) {
       Log.i(TAG, "Compensating rotation for front camera");
-      cwNeededRotation = (360 - cwRotationFromDisplayToCamera) % 360;
+      cwNeededRotation = cwRotationFromDisplayToCamera;//(360 - cwRotationFromDisplayToCamera) % 360;
     } else {
       cwNeededRotation = cwRotationFromDisplayToCamera;
     }
@@ -148,13 +149,23 @@ public final class CameraConfigurationManager {
 //      screenResolutionForCamera.x = screenResolution.y;
 //      screenResolutionForCamera.y =screenResolution.x;
 //    }
+    if(Config.KEY_IS_AUTO_DEVICE) {
+      cameraResolution = CameraConfigurationUtils.findBestPreviewResolution(parameters, screenResolution, cwRotationFromNaturalToDisplay, cwNeededRotation);
+      bestPreviewSize = CameraConfigurationUtils.findBestPreviewResolution(parameters, screenResolution,
+              cwRotationFromNaturalToDisplay, cwNeededRotation);
+    }
+    else{
 
-
-    cameraResolution = CameraConfigurationUtils.findCloselySize(parameters, screenResolution.x, screenResolution.y,
+      cameraResolution = CameraConfigurationUtils.findCloselySize(parameters, screenResolution.x, screenResolution.y,
             parameters.getSupportedPreviewSizes());
+      bestPreviewSize = CameraConfigurationUtils.findCloselySize(parameters, screenResolution.x,
+        screenResolution.y, parameters.getSupportedPictureSizes());
+    }
+
     Log.e(TAG, "Setting preview size: " + cameraResolution.x + "-" + cameraResolution.y);
-    bestPreviewSize = CameraConfigurationUtils.findCloselySize(parameters, screenResolution.x,
-            screenResolution.y, parameters.getSupportedPictureSizes());
+
+
+
     Log.e(TAG, "Setting picture size: " + bestPreviewSize.x + "-" + bestPreviewSize.y);
 //    Log.i(TAG, "Screen resolution in current orientation: " + screenResolution);
 //    cameraResolution = CameraConfigurationUtils.findBestPreviewSizeValue(parameters, screenResolution/*screenResolutionForCamera*/);
@@ -263,7 +274,7 @@ public final class CameraConfigurationManager {
 //    }
 
 
-    theCamera.setDisplayOrientation(90);
+    theCamera.setDisplayOrientation(getCWNeededRotation());
   }
 
 
